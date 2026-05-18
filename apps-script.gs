@@ -24,8 +24,11 @@ function doPost(e) {
       case 'clearCompleted':
         result = clearCompleted();
         break;
+      case 'updateSheet':
+        result = updateSheet(params.todos);
+        break;
       default:
-        result = { error: 'Unknown action' };
+        result = { error: 'Unknown action: ' + action };
     }
     
     return ContentService.createTextOutput(JSON.stringify(result))
@@ -46,10 +49,10 @@ function getTodos() {
     if (values[i][0]) {
       todos.push({
         id: values[i][0],
-        text: values[i][1],
+        text: values[i][1], // Task
         completed: values[i][2] === true || values[i][2] === 'true',
-        createdAt: values[i][3],
-        updatedAt: values[i][4]
+        createdAt: values[i][3], // Created
+        updatedAt: values[i][4]  // Update
       });
     }
   }
@@ -57,11 +60,34 @@ function getTodos() {
   return { success: true, todos: todos };
 }
 
+function updateSheet(todos) {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  sheet.clear(); // 기존 데이터 삭제
+  
+  // 헤더 추가 (ID, Task, Completed, Created, Update)
+  const header = ['ID', 'Task', 'Completed', 'Created', 'Update'];
+  sheet.appendRow(header);
+  
+  // 데이터 추가
+  todos.forEach(function(todo) {
+    sheet.appendRow([
+      todo.id,
+      todo.text,
+      todo.completed,
+      todo.createdAt,
+      todo.updatedAt
+    ]);
+  });
+  
+  return { success: true };
+}
+
 function addTodo(text) {
   const sheet = SpreadsheetApp.getActiveSheet();
   const id = 'todo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   const now = new Date().toISOString();
   
+  // ID, Task, Completed, Created, Update 순서
   sheet.appendRow([id, text, false, now, now]);
   
   return { success: true, id: id };
@@ -75,7 +101,7 @@ function updateTodo(id, completed) {
     if (values[i][0] === id) {
       const now = new Date().toISOString();
       sheet.getRange(i + 1, 3).setValue(completed); // C열: Completed
-      sheet.getRange(i + 1, 5).setValue(now); // E열: Updated
+      sheet.getRange(i + 1, 5).setValue(now); // E열: Update
       return { success: true };
     }
   }
