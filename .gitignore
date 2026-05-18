@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Configuration (로컬 설정 파일 - API Key 포함)
+config.local.js
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.windows-build-tools
+
+# Build
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sensitive files (주의: API Key는 커밋하지 마세요)
+.secrets
+*.pem
+*.key
+
+# Temporary files
+*.tmp
+.cache/
