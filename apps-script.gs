@@ -64,13 +64,17 @@ function updateSheet(todos) {
   const sheet = SpreadsheetApp.getActiveSheet();
   sheet.clear(); // 기존 데이터 삭제
   
-  // 헤더 추가 (ID, Task, Completed, Created, Update)
   const header = ['ID', 'Task', 'Completed', 'Created', 'Update'];
-  sheet.appendRow(header);
   
-  // 데이터 추가
+  if (!todos || todos.length === 0) {
+    sheet.appendRow(header);
+    return { success: true };
+  }
+
+  // 데이터를 2차원 배열로 구성 (헤더 포함)
+  const rows = [header];
   todos.forEach(function(todo) {
-    sheet.appendRow([
+    rows.push([
       todo.id,
       todo.text,
       todo.completed,
@@ -78,6 +82,9 @@ function updateSheet(todos) {
       todo.updatedAt
     ]);
   });
+  
+  // 한 번에 모든 데이터 쓰기 (성능 대폭 향상)
+  sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
   
   return { success: true };
 }

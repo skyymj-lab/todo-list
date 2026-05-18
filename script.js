@@ -1,7 +1,7 @@
-// Google Sheets 연동 설정 (config.js에서 자동 로드)
-let googleSheetId = CONFIG.googleSheetId;
-let googleApiKey = CONFIG.googleApiKey;
-let appsScriptUrl = CONFIG.appsScriptUrl;
+// 설정 정보 변수
+let googleSheetId = '';
+let googleApiKey = '';
+let appsScriptUrl = '';
 
 // Todo 데이터 저장소
 let todos = [];
@@ -14,6 +14,10 @@ const todoList = document.getElementById('todoList');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 const syncBtn = document.getElementById('syncBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const notification = document.getElementById('notification');
 const totalCount = document.getElementById('totalCount');
 const completedCount = document.getElementById('completedCount');
@@ -21,20 +25,47 @@ const remainingCount = document.getElementById('remainingCount');
 
 // 초기화
 document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
     attachEventListeners();
-    loadTodosFromSheet();
     
-    // 설정 로드 확인
-    console.log('📋 설정 정보:');
-    console.log('Google Sheet ID:', googleSheetId);
-    console.log('API Key 로드됨:', !!googleApiKey);
-    console.log('Apps Script URL 설정됨:', !!appsScriptUrl);
-    
-    // 자동 동기화 설정
-    if (CONFIG.syncInterval > 0) {
-        setInterval(loadTodosFromSheet, CONFIG.syncInterval);
+    if (googleSheetId && googleApiKey) {
+        loadTodosFromSheet();
+    } else {
+        // 설정이 없으면 자동으로 설정 모달 표시
+        settingsModal.style.display = 'block';
+        loadTodosFromLocalStorage();
+        showNotification('👋 처음 오셨군요! API 설정을 완료해주세요.', 'info');
     }
 });
+
+// 설정 로드 (SessionStorage 사용)
+function loadSettings() {
+    googleSheetId = sessionStorage.getItem('googleSheetId') || '';
+    googleApiKey = sessionStorage.getItem('googleApiKey') || '';
+    appsScriptUrl = sessionStorage.getItem('appsScriptUrl') || '';
+    
+    document.getElementById('inputSheetId').value = googleSheetId;
+    document.getElementById('inputApiKey').value = googleApiKey;
+    document.getElementById('inputAppScript').value = appsScriptUrl;
+}
+
+// 설정 저장 (SessionStorage 사용)
+function saveSettings() {
+    googleSheetId = document.getElementById('inputSheetId').value.trim();
+    googleApiKey = document.getElementById('inputApiKey').value.trim();
+    appsScriptUrl = document.getElementById('inputAppScript').value.trim();
+    
+    sessionStorage.setItem('googleSheetId', googleSheetId);
+    sessionStorage.setItem('googleApiKey', googleApiKey);
+    sessionStorage.setItem('appsScriptUrl', appsScriptUrl);
+    
+    settingsModal.style.display = 'none';
+    showNotification('✅ 세션 설정이 저장되었습니다 (탭 종료 시 삭제)', 'success');
+    
+    if (googleSheetId && googleApiKey) {
+        loadTodosFromSheet();
+    }
+}
 
 // 이벤트 리스너 설정
 function attachEventListeners() {
@@ -54,6 +85,32 @@ function attachEventListeners() {
 
     clearCompletedBtn.addEventListener('click', handleClearCompleted);
     syncBtn.addEventListener('click', loadTodosFromSheet);
+    
+    // 설정 모달 관련
+    settingsBtn.addEventListener('click', () => settingsModal.style.display = 'block');
+    closeSettingsBtn.addEventListener('click', () => settingsModal.style.display = 'none');
+    saveSettingsBtn.addEventListener('click', saveSettings);
+    
+    // 도움말 토글
+    document.querySelectorAll('.help-icon').forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            e.preventDefault();
+            const helpId = icon.dataset.help;
+            const helpContent = document.getElementById(helpId);
+            
+            // 다른 도움말은 닫기
+            document.querySelectorAll('.help-text').forEach(el => {
+                if (el.id !== helpId) el.style.display = 'none';
+            });
+            
+            const isVisible = window.getComputedStyle(helpContent).display === 'block';
+            helpContent.style.display = isVisible ? 'none' : 'block';
+        });
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === settingsModal) settingsModal.style.display = 'none';
+    });
 }
 
 // Google Sheets에서 데이터 로드
@@ -98,10 +155,13 @@ function parseSheetData(values) {
     for (let i = 1; i < values.length; i++) {
         const row = values[i];
         if (row.length > 0 && row[0]) {
+            // Google Sheets는 TRUE/FALSE를 대문자로 반환할 수 있으므로 소문자로 변환하여 비교
+            const isCompleted = String(row[2]).toLowerCase() === 'true';
+            
             todoArray.push({
                 id: row[0],
                 text: row[1] || '',
-                completed: row[2] === 'true' || row[2] === true,
+                completed: isCompleted,
                 createdAt: row[3] || new Date().toISOString(),
                 updatedAt: row[4] || new Date().toISOString()
             });
